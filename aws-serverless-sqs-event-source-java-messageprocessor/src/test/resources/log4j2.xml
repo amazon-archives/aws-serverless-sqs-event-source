@@ -1,0 +1,10 @@
+<Configuration>
+    <Appenders>
+        <File name="LOG" fileName="target/tests.log" append="false"/>
+    </Appenders>
+    <Loggers>
+        <Root level="info">
+            <AppenderRef ref="LOG"/>
+        </Root>
+    </Loggers>
+</Configuration>
