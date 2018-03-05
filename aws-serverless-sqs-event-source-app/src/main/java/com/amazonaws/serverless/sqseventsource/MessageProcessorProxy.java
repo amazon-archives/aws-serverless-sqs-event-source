@@ -21,7 +21,7 @@ public class MessageProcessorProxy {
     private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
 
     @NonNull
-    private final String messageProcessorArn;
+    private final String messageProcessorFunctionName;
     @NonNull
     private final AWSLambda lambda;
 
@@ -30,7 +30,7 @@ public class MessageProcessorProxy {
         String requestPayload = GSON.toJson(request);
 
         InvokeRequest invokeRequest = new InvokeRequest()
-                .withFunctionName(messageProcessorArn)
+                .withFunctionName(messageProcessorFunctionName)
                 .withInvocationType(InvocationType.RequestResponse)
                 .withPayload(requestPayload);
 

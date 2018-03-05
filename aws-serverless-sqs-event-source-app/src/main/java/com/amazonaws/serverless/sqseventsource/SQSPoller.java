@@ -20,6 +20,7 @@ public class SQSPoller {
     private static final Integer TIMEOUT_IN_MS = 200;
     @NonNull
     private final SQSProxy sqsProxy;
+    // TODO: kill this. We shouldn't rely on clients to be able to tell us how long it'll take them to process a message. Should just measure it ourselves.
     @NonNull
     private final Integer processingTimeInMilliseconds;
     @NonNull

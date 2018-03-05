@@ -20,15 +20,10 @@ import dagger.Provides;
  */
 @Module
 public class AppModule {
-    private static final String QUEUE_URL_KEY = "QUEUE_URL";
-    private static final String PROCESSING_TIME_IN_MILLISECONDS_KEY = "PROCESSING_TIME_IN_MILLISECONDS";
-    private static final String MESSAGE_PROCESSOR_ARN_KEY = "MESSAGE_PROCESSOR_ARN";
-
     @Provides
     @Singleton
     public SQSPoller provideSQSPoller(final SQSProxy sqsProxy, final MessageDispatcher messageDispatcher) {
-        Integer processingTime = Integer.valueOf(System.getenv(PROCESSING_TIME_IN_MILLISECONDS_KEY));
-        return new SQSPoller(sqsProxy, processingTime, messageDispatcher);
+        return new SQSPoller(sqsProxy, 1000, messageDispatcher);
     }
 
     @Provides
@@ -47,15 +42,13 @@ public class AppModule {
     @Provides
     @Singleton
     public SQSProxy provideSQSProxy(final AmazonSQS sqs) {
-        String queueUrl = System.getenv(QUEUE_URL_KEY);
-        return new SQSProxy(sqs, queueUrl);
+        return new SQSProxy(sqs, Env.getQueueUrl());
     }
 
     @Provides
     @Singleton
     public MessageProcessorProxy provideMessageProcessorProxy(final AWSLambda lambda) {
-        String messageProcessorArn = System.getenv(MESSAGE_PROCESSOR_ARN_KEY);
-        return new MessageProcessorProxy(messageProcessorArn, lambda);
+        return new MessageProcessorProxy(Env.getMessageProcessorFunctionName(), lambda);
     }
 
     @Provides

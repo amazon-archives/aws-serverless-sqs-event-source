@@ -23,7 +23,7 @@ import org.mockito.MockitoAnnotations;
 
 public class MessageProcessorProxyTest {
 
-    private static final String MESSAGE_PROCESSOR_ARN = "messageProcessorLambda";
+    private static final String MESSAGE_PROCESSOR_FUNCTION_NAME = "messageProcessorLambda";
     private static final Message MESSAGE1 = new Message().withMessageId("message1").withBody("this is a test message1");
     private static final Message MESSAGE2 = new Message().withMessageId("message2").withBody("this is a test message2");
     private static final Message MESSAGE3 = new Message().withMessageId("message3").withBody("this is a test message3");
@@ -37,7 +37,7 @@ public class MessageProcessorProxyTest {
     @Before
     public void setup() throws Exception {
         MockitoAnnotations.initMocks(this);
-        messageProcessorProxy = new MessageProcessorProxy(MESSAGE_PROCESSOR_ARN, lambda);
+        messageProcessorProxy = new MessageProcessorProxy(MESSAGE_PROCESSOR_FUNCTION_NAME, lambda);
     }
 
     @Test
