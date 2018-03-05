@@ -1,0 +1,12 @@
+/eclipse-bin/
+*.iml
+.classpath
+bin
+.settings
+.project
+build/
+target/
+.*.sw[op]
+.DS_Store
+.idea/
+out
