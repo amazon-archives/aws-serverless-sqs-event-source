@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Resources:
+  MessageQueue:
+    Type: AWS::SQS::Queue
+
+  MessageProcessor:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: nodejs6.10
+      Handler: index.handler
+      MemorySize: 256
+      Timeout: 60
+      Role: !GetAtt MessageProcessorRole.Arn
+      Code:
+        ZipFile: >
+          exports.handler = (event, context, callback) => {
+              var messages = event.messages;
+              var response = {
+                  messageResults:[]
+              };
+              var messageResult = {
+                messageId: "",
+                status: ""
+              };
+              //handle messages based on body
+              messages.forEach(function(message) {
+                  if (message.body.startsWith("ERROR")) {
+                    messageResult = { messageId: message.messageId, status: "ERROR"};
+                    response.messageResults.push(messageResult);
+                  } else if (message.body.startsWith("RETRY")) {
+                    messageResult = { messageId: message.messageId, status: "RETRY", retryDelayInSeconds: 15};
+                    response.messageResults.push(messageResult);
+                  } else {
+                    messageResult = { messageId: message.messageId, status: "SUCCESS"};
+                    response.messageResults.push(messageResult);
+                  }
+              });
+              callback(null, response);
+            };
+
+  MessageProcessorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+       Statement:
+         - Effect: Allow
+           Principal:
+               Service:
+               - lambda.amazonaws.com
+           Action:
+           - sts:AssumeRole
+
+Outputs:
+  MessageQueueName:
+    Value: !GetAtt MessageQueue.QueueName
+  MessageQueueUrl:
+    Value: !Ref MessageQueue
+  MessageProcessorFunctionName:
+    Value: !Ref MessageProcessor

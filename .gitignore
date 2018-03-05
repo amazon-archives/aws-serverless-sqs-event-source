@@ -1,7 +1,6 @@
 /eclipse-bin/
 *.iml
 .classpath
-bin
 .settings
 .project
 build/
