@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.model.InvocationType;
 import com.amazonaws.services.lambda.model.InvokeRequest;
 import com.amazonaws.services.lambda.model.InvokeResult;
 
+import com.google.common.base.Charsets;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -37,7 +38,7 @@ public class MessageProcessorProxy {
         InvokeResult result = lambda.invoke(invokeRequest);
 
         byte[] bytes = result.getPayload().array();
-        String stringPayload = new String(bytes, com.google.common.base.Charsets.UTF_8);
+        String stringPayload = new String(bytes, Charsets.UTF_8);
         return GSON.fromJson(stringPayload, SQSMessageProcessorResponse.class);
     }
 }

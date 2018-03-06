@@ -14,12 +14,6 @@ Parameters:
     Type: Number
     Description: Memory size of SQSPoller lambda.
     Default: 512
-  SQSPollerTimeout:
-    Type: Number
-    Description: SQSPoller timeout in seconds.
-    MinValue: 30
-    MaxValue: 300
-    Default: 60
 
 Resources:
   SQSPoller:
@@ -30,7 +24,7 @@ Resources:
       Handler: com.amazonaws.serverless.sqseventsource.lambda.SQSPollerHandler::handleRequest
       Tracing: Active
       MemorySize: !Ref SQSPollerMemorySize
-      Timeout: !Ref SQSPollerTimeout
+      Timeout: 60
       Policies:
         - SQSPollerPolicy:
             QueueName: !Ref MessageQueueName
@@ -44,7 +38,7 @@ Resources:
         Timer:
           Type: Schedule
           Properties:
-            Schedule: !Sub rate(${SQSPollerTimeout} seconds)
+            Schedule: rate(1 minute)
 
 Outputs:
   SQSPollerFunctionName:
