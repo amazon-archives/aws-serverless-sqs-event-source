@@ -19,7 +19,7 @@ Resources:
   SQSPoller:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: target/aws-serverless-sqs-event-source-app-1.0.jar
+      CodeUri: target/aws-serverless-sqs-event-source-app-1.0.0.jar
       Runtime: java8
       Handler: com.amazonaws.serverless.sqseventsource.lambda.SQSPollerHandler::handleRequest
       Tracing: Active
