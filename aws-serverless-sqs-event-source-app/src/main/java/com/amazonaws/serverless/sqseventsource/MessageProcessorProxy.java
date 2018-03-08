@@ -13,10 +13,12 @@ import com.google.gson.GsonBuilder;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
- * Invokes a message processor lambda function.
+ * Proxy for interacting with the message processor lambda function.
  */
+@Slf4j
 @RequiredArgsConstructor
 public class MessageProcessorProxy {
     private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
@@ -27,7 +29,7 @@ public class MessageProcessorProxy {
     private final AWSLambda lambda;
 
     public SQSMessageProcessorResponse invoke(final SQSMessageProcessorRequest request) {
-
+        log.info("Invoking message processor lambda to process {} messages", request.getMessages().size());
         String requestPayload = GSON.toJson(request);
 
         InvokeRequest invokeRequest = new InvokeRequest()

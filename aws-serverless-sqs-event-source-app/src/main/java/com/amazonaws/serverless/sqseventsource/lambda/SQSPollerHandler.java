@@ -20,7 +20,7 @@ public class SQSPollerHandler implements RequestHandler<ScheduledEvent, Void> {
 
     @Override
     public Void handleRequest(final ScheduledEvent event, final Context context) {
-        sqsPoller.poll(context);
+        sqsPoller.poll(context.getRemainingTimeInMillis());
         return null;
     }
 }

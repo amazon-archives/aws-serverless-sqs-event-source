@@ -23,7 +23,7 @@ public class AppModule {
     @Provides
     @Singleton
     public SQSPoller provideSQSPoller(final SQSProxy sqsProxy, final MessageDispatcher messageDispatcher) {
-        return new SQSPoller(sqsProxy, 1000, messageDispatcher);
+        return new SQSPoller(sqsProxy, messageDispatcher);
     }
 
     @Provides
