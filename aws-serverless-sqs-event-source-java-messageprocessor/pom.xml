@@ -6,7 +6,7 @@
 
     <groupId>com.amazonaws.serverless</groupId>
     <artifactId>aws-serverless-sqs-event-source-java-messageprocessor</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
 
     <name>aws-serverless-sqs-event-source-java-messageprocessor</name>
     <url>
