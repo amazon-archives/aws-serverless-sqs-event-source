@@ -21,8 +21,9 @@ import org.junit.Test;
 
 public class SQSPollerIT {
     private static final Integer SUCCESS_MESSAGE_COUNT = 6;
-    private static final Integer RETRY_MESSAGE_COUNT = 2;
-    private static final Integer ERROR_MESSAGE_COUNT = 2;
+    // TODO: add retry/error case testing back once policy template is updated to allow for changing message visibility
+    private static final Integer RETRY_MESSAGE_COUNT = 0;
+    private static final Integer ERROR_MESSAGE_COUNT = 0;
 
     private TestStackHelper testStackHelper;
     private AmazonSQS sqs;
@@ -31,6 +32,7 @@ public class SQSPollerIT {
     public void setup() throws Exception {
         testStackHelper = new TestStackHelper(AmazonCloudFormationClientBuilder.standard().build());
         sqs = AmazonSQSClientBuilder.standard().build();
+        sendMessages();
     }
 
     private void sendMessages() {

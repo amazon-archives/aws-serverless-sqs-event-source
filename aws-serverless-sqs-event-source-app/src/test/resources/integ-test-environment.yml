@@ -16,6 +16,7 @@ Resources:
         ZipFile: >
           exports.handler = (event, context, callback) => {
               var messages = event.messages;
+              console.log("Received messages: " + JSON.stringify(messages));
               var response = {
                   messageResults:[]
               };
@@ -42,6 +43,9 @@ Resources:
   MessageProcessorRole:
     Type: AWS::IAM::Role
     Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       AssumeRolePolicyDocument:
        Statement:
          - Effect: Allow
