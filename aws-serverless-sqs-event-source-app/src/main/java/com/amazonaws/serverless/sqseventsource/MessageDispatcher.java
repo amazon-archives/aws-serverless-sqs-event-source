@@ -1,17 +1,14 @@
 package com.amazonaws.serverless.sqseventsource;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.LongSummaryStatistics;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.function.LongUnaryOperator;
 import java.util.stream.Collectors;
-import java.util.stream.LongStream;
 
 import com.amazonaws.serverless.sqseventsource.messageprocessor.SQSMessageProcessorRequest;
 import com.amazonaws.serverless.sqseventsource.messageprocessor.SQSMessageProcessorResponse;
@@ -20,16 +17,17 @@ import com.amazonaws.services.sqs.model.Message;
 
 import com.google.common.base.Preconditions;
 
+import lombok.AccessLevel;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Delegates messages to processor implementation.
- * Acks/Nacks messages from SQS.
+ * Handles dispatching messages to message processor and acking/nacking SQS messages. Also provides capacity estimates based on
+ * measuring processing times of previous messages.
  */
 @Slf4j
-@RequiredArgsConstructor
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class MessageDispatcher {
     static final int DEFAULT_RETRY_DELAY_IN_SECONDS = 10;
     static final int DEFAULT_ERROR_RETRY_DELAY_IN_SECONDS = 5;
@@ -38,15 +36,21 @@ public class MessageDispatcher {
     private final SQSProxy sqsProxy;
     @NonNull
     private final MessageProcessorProxy messageProcessorProxy;
+    @NonNull
+    private final Clock clock;
 
-    private final List<Long> messageProcessingTimings = new ArrayList<>();
+    private MessageProcessingStats stats = new MessageProcessingStats();
+
+    public MessageDispatcher(final SQSProxy sqsProxy, final MessageProcessorProxy messageProcessorProxy) {
+        this(sqsProxy, messageProcessorProxy, Clock.systemUTC());
+    }
 
     public void dispatch(final List<Message> messages) {
         Preconditions.checkArgument(!messages.isEmpty(), "messages cannot be empty");
 
-        Instant start = Instant.now();
+        Instant start = Instant.now(clock);
         SQSMessageProcessorResponse response = messageProcessorProxy.invoke(new SQSMessageProcessorRequest(messages));
-        updateTimings(Duration.between(start, Instant.now()).toMillis(), messages.size());
+        stats.record(Duration.between(start, Instant.now(clock)), messages.size());
 
         Map<SQSMessageResult.Status, List<SQSMessageResult>> resultsByStatus = response.getMessageResults()
                 .stream()
@@ -55,16 +59,6 @@ public class MessageDispatcher {
         deleteMessages(messages, resultsByStatus.getOrDefault(SQSMessageResult.Status.SUCCESS, Collections.emptyList()));
         retryMessages(messages, resultsByStatus.getOrDefault(SQSMessageResult.Status.RETRY, Collections.emptyList()));
         retryMessages(messages, resultsByStatus.getOrDefault(SQSMessageResult.Status.ERROR, Collections.emptyList()));
-    }
-
-    private synchronized void updateTimings(long processingTimeInMillis, int numMessagesProcessed) {
-        long perMessageAverage = processingTimeInMillis / numMessagesProcessed;
-        log.info("Processed {} messages in {}ms. perMessageAverage={}ms", numMessagesProcessed, processingTimeInMillis, perMessageAverage);
-        messageProcessingTimings.addAll(
-                LongStream.iterate(perMessageAverage, LongUnaryOperator.identity())
-                        .limit(numMessagesProcessed)
-                        .boxed()
-                        .collect(Collectors.toList()));
     }
 
     private void deleteMessages(final List<Message> messages, final List<SQSMessageResult> results) {
@@ -110,27 +104,16 @@ public class MessageDispatcher {
         return DEFAULT_ERROR_RETRY_DELAY_IN_SECONDS;
     }
 
-    public synchronized void reset() {
-        messageProcessingTimings.clear();
+    public void reset() {
+        stats = new MessageProcessingStats();
     }
 
-    public synchronized int getEstimatedCapacity(Instant cutoff) {
+    public int getEstimatedCapacity(Instant cutoff) {
         // special case: if we haven't processed anything yet, just say we can process a lot of messages
-        if (messageProcessingTimings.isEmpty()) {
-            log.info("No message processing timings yet. Returning estimated capacity of INT_MAX");
+        if (!stats.hasSamples()) {
+            log.info("No message processing stats yet. Returning estimated capacity of INT_MAX");
             return Integer.MAX_VALUE;
         }
-
-        // otherwise, use average of messages processed to estimate how many more we can handle
-        LongSummaryStatistics stats = messageProcessingTimings.stream()
-                .collect(Collectors.summarizingLong(Long::longValue));
-
-        double averagePerMessageProcessingTimeInMillis = stats.getAverage();
-        long remainingMillis = Duration.between(Instant.now(), cutoff).toMillis();
-        int estimatedCapacity = (int) (((double) remainingMillis) / averagePerMessageProcessingTimeInMillis);
-
-        log.info("Estimated capacity of {} messages in remaining {}ms from timings: {}", estimatedCapacity, remainingMillis, messageProcessingTimings);
-
-        return estimatedCapacity;
+        return stats.getEstimatedCapacity(Duration.between(Instant.now(clock), cutoff));
     }
 }
