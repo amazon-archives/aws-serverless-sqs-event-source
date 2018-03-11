@@ -52,12 +52,14 @@ The app requires the user to provide a message processor lambda function to proc
 Supported status values are:
 
 1. `SUCCESS` - Indicates the message was processed successfully. In this case, the SQSPoller will remove it from the queue.
-1. `ERROR` - Indicates an error occurred while processing this message. In this case, the SQSPoller will change its visibility so it is retried in 5 seconds.
 1. `RETRY` - Indicates the message processor would like the message to be retried after some time. If `retryDelayInSeconds` is specified, the SQSPoller will change the message's visibility so it is retried in that amount of time. If no retry delay is specified, it will use a default retry delay of 10 seconds.
+1. `ERROR` - Indicates an error occurred while processing this message. In this case, the SQSPoller will do nothing with the message and rely on the queue's visibility timeout setting to determine when the message will be visible for retry.
+
+If the message processor lambda function encounters an unhandled error (unsuccessful execution), the SQSPoller will do nothing with the messages sent to the lambda function, similar to how it handles the `ERROR` message result status.
 
 #### aws-serverless-sqs-event-source-java-messageprocessor
 
-This repo also includes a maven convenience library to make it easier to write Java-based message processor lambda functions meant to interact with this app.
+This github repo also includes a maven convenience library to make it easier to write Java-based message processor lambda functions meant to interact with this app.
 
 ## License Summary
 
