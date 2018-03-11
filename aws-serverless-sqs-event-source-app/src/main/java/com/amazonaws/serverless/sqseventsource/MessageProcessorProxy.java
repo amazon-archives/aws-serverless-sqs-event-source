@@ -7,7 +7,6 @@ import com.amazonaws.services.lambda.model.InvocationType;
 import com.amazonaws.services.lambda.model.InvokeRequest;
 import com.amazonaws.services.lambda.model.InvokeResult;
 
-import com.google.common.base.Charsets;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -28,7 +27,7 @@ public class MessageProcessorProxy {
     @NonNull
     private final AWSLambda lambda;
 
-    public SQSMessageProcessorResponse invoke(final SQSMessageProcessorRequest request) {
+    public SQSMessageProcessorResponse invoke(final SQSMessageProcessorRequest request) throws MessageProcessorException {
         log.info("Invoking message processor lambda to process {} messages", request.getMessages().size());
         String requestPayload = GSON.toJson(request);
 
@@ -39,8 +38,10 @@ public class MessageProcessorProxy {
 
         InvokeResult result = lambda.invoke(invokeRequest);
 
-        byte[] bytes = result.getPayload().array();
-        String stringPayload = new String(bytes, Charsets.UTF_8);
-        return GSON.fromJson(stringPayload, SQSMessageProcessorResponse.class);
+        if (result.getFunctionError() != null) {
+            throw new MessageProcessorException(result);
+        }
+
+        return GSON.fromJson(LambdaUtil.getPayloadAsString(result), SQSMessageProcessorResponse.class);
     }
 }

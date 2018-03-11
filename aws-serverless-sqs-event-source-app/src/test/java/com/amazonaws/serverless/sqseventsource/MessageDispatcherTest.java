@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -113,11 +114,6 @@ public class MessageDispatcherTest {
         dispatcher.dispatch(messages);
 
         verify(messageProcessorProxy).invoke(new SQSMessageProcessorRequest(messages));
-        List<RetryMessageRequest> expected = Lists.newArrayList(
-                new RetryMessageRequest(m1, MessageDispatcher.DEFAULT_ERROR_RETRY_DELAY_IN_SECONDS),
-                new RetryMessageRequest(m2, MessageDispatcher.DEFAULT_ERROR_RETRY_DELAY_IN_SECONDS)
-        );
-        verify(sqsProxy).retryMessages(expected);
         verifyNoMoreInteractions(messageProcessorProxy, sqsProxy);
     }
 
@@ -138,7 +134,17 @@ public class MessageDispatcherTest {
         verify(messageProcessorProxy).invoke(new SQSMessageProcessorRequest(messages));
         verify(sqsProxy).deleteMessages(Lists.newArrayList(success));
         verify(sqsProxy).retryMessages(Lists.newArrayList(new RetryMessageRequest(retry, MessageDispatcher.DEFAULT_RETRY_DELAY_IN_SECONDS)));
-        verify(sqsProxy).retryMessages(Lists.newArrayList(new RetryMessageRequest(error, MessageDispatcher.DEFAULT_ERROR_RETRY_DELAY_IN_SECONDS)));
+        verifyNoMoreInteractions(messageProcessorProxy, sqsProxy);
+    }
+
+    @Test
+    public void dispatch_messageProcessorException() throws Exception {
+        List<Message> messages = Lists.newArrayList(mockMessage("1"));
+        doThrow(MessageProcessorException.class).when(messageProcessorProxy).invoke(any());
+
+        dispatcher.dispatch(messages);
+
+        verify(messageProcessorProxy).invoke(new SQSMessageProcessorRequest(messages));
         verifyNoMoreInteractions(messageProcessorProxy, sqsProxy);
     }
 
@@ -173,7 +179,7 @@ public class MessageDispatcherTest {
         return message;
     }
 
-    private void mockProcessorResults(SQSMessageResult... results) {
+    private void mockProcessorResults(SQSMessageResult... results) throws Exception {
         when(messageProcessorProxy.invoke(any())).thenReturn(new SQSMessageProcessorResponse(Arrays.asList(results)));
     }
 

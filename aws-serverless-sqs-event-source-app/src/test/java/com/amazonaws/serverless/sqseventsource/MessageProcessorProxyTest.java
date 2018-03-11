@@ -41,7 +41,7 @@ public class MessageProcessorProxyTest {
     }
 
     @Test
-    public void invoke() {
+    public void invoke() throws Exception {
         SQSMessageProcessorRequest sqsMessageProcessorRequest = new SQSMessageProcessorRequest();
         sqsMessageProcessorRequest.setMessages(MESSAGES);
 
@@ -55,16 +55,13 @@ public class MessageProcessorProxyTest {
         messageProcessorProxy.invoke(sqsMessageProcessorRequest);
     }
 
-    @Test(expected = RuntimeException.class)
-    public void invoke_invalidResponse() {
+    @Test(expected = MessageProcessorException.class)
+    public void invoke_functionError() throws Exception {
         SQSMessageProcessorRequest sqsMessageProcessorRequest = new SQSMessageProcessorRequest();
         sqsMessageProcessorRequest.setMessages(MESSAGES);
 
-        //invalid json string
-        ByteBuffer byteBuffer = ByteBuffer.wrap("{\"key1\":value1,\"key2\":}".getBytes());
-
         InvokeResult invokeResult = mock(InvokeResult.class);
-        when(invokeResult.getPayload()).thenReturn(byteBuffer);
+        when(invokeResult.getFunctionError()).thenReturn("Unhandled");
         when(lambda.invoke(any(InvokeRequest.class))).thenReturn(invokeResult);
 
         messageProcessorProxy.invoke(sqsMessageProcessorRequest);

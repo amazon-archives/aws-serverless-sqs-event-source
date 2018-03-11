@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -30,7 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class MessageDispatcher {
     static final int DEFAULT_RETRY_DELAY_IN_SECONDS = 10;
-    static final int DEFAULT_ERROR_RETRY_DELAY_IN_SECONDS = 5;
 
     @NonNull
     private final SQSProxy sqsProxy;
@@ -49,8 +49,14 @@ public class MessageDispatcher {
         Preconditions.checkArgument(!messages.isEmpty(), "messages cannot be empty");
 
         Instant start = Instant.now(clock);
-        SQSMessageProcessorResponse response = messageProcessorProxy.invoke(new SQSMessageProcessorRequest(messages));
-        stats.record(Duration.between(start, Instant.now(clock)), messages.size());
+        SQSMessageProcessorResponse response;
+        try {
+            response = messageProcessorProxy.invoke(new SQSMessageProcessorRequest(messages));
+            stats.record(Duration.between(start, Instant.now(clock)), messages.size());
+        } catch (MessageProcessorException e) {
+            log.warn("MessageProcessor encountered an error", e);
+            return;
+        }
 
         Map<SQSMessageResult.Status, List<SQSMessageResult>> resultsByStatus = response.getMessageResults()
                 .stream()
@@ -58,18 +64,30 @@ public class MessageDispatcher {
 
         deleteMessages(messages, resultsByStatus.getOrDefault(SQSMessageResult.Status.SUCCESS, Collections.emptyList()));
         retryMessages(messages, resultsByStatus.getOrDefault(SQSMessageResult.Status.RETRY, Collections.emptyList()));
-        retryMessages(messages, resultsByStatus.getOrDefault(SQSMessageResult.Status.ERROR, Collections.emptyList()));
+
+        // Just log failed messages, but do not do anything to the queue. Let user control this behavior through SQS queue's visibility timeout setting
+        logFailedMessageResults(resultsByStatus.getOrDefault(SQSMessageResult.Status.ERROR, Collections.emptyList()));
+    }
+
+    private void logFailedMessageResults(List<SQSMessageResult> results) {
+        if (results.isEmpty()) {
+            // nothing to do
+            return;
+        }
+        log.info("{} messages encountered errors during processing: {}", results.size(), results);
     }
 
     private void deleteMessages(final List<Message> messages, final List<SQSMessageResult> results) {
-        log.info("Deleting {} messages.", results.size());
         if (results.isEmpty()) {
+            // nothing to do
             return;
         }
 
         Set<String> messageIds = results.stream()
                 .map(SQSMessageResult::getMessageId)
                 .collect(Collectors.toSet());
+
+        log.info("Deleting {} successful messages from the queue. messageIds: {}", messageIds.size(), messageIds);
 
         List<Message> msgsProcessed = messages.stream()
                 .filter(message -> messageIds.contains(message.getMessageId()))
@@ -79,7 +97,6 @@ public class MessageDispatcher {
     }
 
     private void retryMessages(final List<Message> messages, final List<SQSMessageResult> results) {
-        log.info("Retrying {} messages.", results.size());
         if (results.isEmpty()) {
             return;
         }
@@ -91,17 +108,13 @@ public class MessageDispatcher {
                 .map(r -> new RetryMessageRequest(messageIdToMessage.get(r.getMessageId()), getRetryDelay(r)))
                 .collect(Collectors.toList());
 
+        log.info("Retrying {} messages. retry results: {}", results.size(), results);
+
         sqsProxy.retryMessages(retryMessageRequests);
     }
 
     private int getRetryDelay(final SQSMessageResult result) {
-        if (result.getRetryDelayInSeconds() != null) {
-            return result.getRetryDelayInSeconds();
-        }
-        if (result.getStatus() == SQSMessageResult.Status.RETRY) {
-            return DEFAULT_RETRY_DELAY_IN_SECONDS;
-        }
-        return DEFAULT_ERROR_RETRY_DELAY_IN_SECONDS;
+        return Optional.ofNullable(result.getRetryDelayInSeconds()).orElse(DEFAULT_RETRY_DELAY_IN_SECONDS);
     }
 
     public void reset() {
