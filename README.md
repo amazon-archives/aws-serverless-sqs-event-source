@@ -16,6 +16,8 @@ This serverless app periodically polls a given SQS queue and invokes a given lam
 1. Go to the app's page on the [Serverless Application Repository](https://serverlessrepo.aws.amazon.com/applications/arn:aws:serverlessrepo:us-east-1:077246666028:applications~aws-serverless-sqs-event-source) and click "Deploy"
 1. Provide the required app parameters and deploy the app to your account.
 
+Note - the S3 bucket used for uploads during the cloudformation stack deploy, must be in us-east-1 availability zone.
+
 ### Parameters
 
 The app requires the following parameters:
