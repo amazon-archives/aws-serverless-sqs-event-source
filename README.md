@@ -1,3 +1,7 @@
+# Disclaimer
+
+#### This repository is no longer supported. Please use natively supported [Lambda+SQS integration](https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html)
+
 ## AWS Serverless SQS Event Source
 
 This serverless app periodically polls a given SQS queue and invokes a given lambda function to process messages. The app handles all interactions with the SQS queue and gives a simple interface for your lambda function to indicate a message was processed successfully or if it should be retried (with a configurable retry delay).
