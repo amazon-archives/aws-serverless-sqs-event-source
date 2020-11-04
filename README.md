@@ -1,6 +1,6 @@
 # Disclaimer
 
-####This repository is no longer supported. Please use natively supported [Lambda+SQS integration](https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html)
+#### This repository is no longer supported. Please use natively supported [Lambda+SQS integration](https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html)
 
 ## AWS Serverless SQS Event Source
 
